@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lecturenews">
+	<!-- 있길래 넣긴 했는데 이건 용도가 뭐지 -->
+	<select id="seq" resultType="Integer">
+		select lecturenews_seq.NEXTVAL from dual
+	</select>
+
+	<!-- 등록 -->
+	<insert id="insertLecNews" parameterType="com.sp.dev.lecturenews.LecNews">
+		insert into lecturenews(newsNum, lectureNum, subject, regDate, content)
+		values (lecturenews_seq.NEXTVAL, #{lectureNum}, #{subject}, sysdate, #{content})
+	</insert>
+	
+	<select id="dataCount" resultType="Integer" parameterType="map">
+		select NVL(COUNT(*), 0) from lecturenews
+		where lectureNum = #{lectureNum}
+	</select>
+	
+	<!-- 리스트 -->
+	<select id="listLecNews" parameterType="map" resultType="com.sp.dev.lecturenews.LecNews">
+		select * from (
+			select rownum rnum, tb.* from (
+				select newsNum, subject, TO_CHAR(ln.regDate, 'YYYY-MM-DD') regDate, ln.content,
+				l.lecturePrice, l.dcPercent,
+					CASE WHEN l.dcPercent = 0 THEN l.lecturePrice
+		             	 WHEN l.dcPercent > 0 THEN l.lecturePrice * (100-dcPercent) / 100
+		        	END as finalPrice
+				FROM lecturenews ln
+				JOIN lecture l ON l.lectureNum=ln.lectureNum
+				where l.lectureNum = #{lectureNum}
+				order by newsNum DESC
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+</mapper>

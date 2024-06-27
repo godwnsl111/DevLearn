@@ -1,0 +1,547 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="my">
+
+	<!-- 대쉬보드 프로필 -->
+	<select id="readDash" parameterType="map" resultType="com.sp.dev.mypage.DashBoard">
+		SELECT m.memberEmail, saveFileName
+		FROM member m
+		JOIN memberProfile p ON m.memberEmail=p.memberEmail
+		WHERE m.memberEmail=#{memberEmail} 
+	</select>
+	
+	<!-- 대쉬보드 강의 개수 -->
+	<select id="dashLectureCount" parameterType="map" resultType="com.sp.dev.mypage.DashLecture">
+		SELECT NVL(COUNT(*), 0) totalLectureNum, NVL(SUM(sugangFinish),0) finishLectureNum
+		FROM sugangDetail s
+        LEFT OUTER JOIN pauseSave p ON s.detailNum=p.detailNum
+		WHERE memberEmail=#{memberEmail}
+	</select>
+	
+	<!-- 대쉬보드 - 최근 구매한 강의 -->
+	<select id="dashRecentLecture" parameterType="map" resultType="com.sp.dev.mypage.DashLecture">
+		SELECT lectureSubject, TO_CHAR(lectureSdate, 'YYYY-MM-DD') lectureSdate
+		FROM sugangDetail s
+		JOIN lecture l ON s.lectureNum=l.lectureNum
+		WHERE s.memberEmail=#{memberEmail}
+	</select>
+	
+	
+	
+	
+	<!-- 내학습 개수 -->
+	<select id="myLectureDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM sugangDetail s
+		JOIN lecture l ON s.lectureNum=l.lectureNum
+		JOIN member m ON l.memberEmail=m.memberEmail
+		<where>
+			s.memberEmail=#{memberEmail}
+			<if test="keyword!=null and keyword != '' ">
+				AND
+				( INSTR(lectureSubject, #{keyword}) &gt; 0
+					OR INSTR(memberNickname, #{keyword}) &gt; 0 )
+			</if>
+		</where>
+		<choose>
+			<when test="order == 2">
+				ORDER BY detailNum DESC
+			</when>
+			<when test="order == 0">
+				ORDER BY lectureSubject ASC
+			</when>
+		</choose>
+	</select>
+	
+	<!-- 내학습 리스트 -->
+	<select id="myLectureList" parameterType="map" resultType="com.sp.dev.mypage.myLecture.MyLecture">
+		SELECT * FROM (
+			SELECT ROWNUM rnum, tb.* FROM (
+				SELECT s.lectureNum, thumbnail, lectureSubject, memberNickname, TO_CHAR(lectureEdate, 'YYYY-MM-DD') lectureEdate
+				FROM sugangDetail s
+				JOIN lecture l ON s.lectureNum=l.lectureNum
+				JOIN member m ON l.memberEmail=m.memberEmail
+				<where>
+					s.memberEmail=#{memberEmail}
+					<if test="keyword!=null and keyword != '' ">
+						AND
+						( INSTR(lectureSubject, #{keyword}) &gt; 0
+							OR INSTR(memberNickname, #{keyword}) &gt; 0 )
+					</if>
+				</where>
+				<choose>
+					<when test="order == 2">
+						ORDER BY detailNum DESC
+					</when>
+					<when test="order == 0">
+						ORDER BY lectureSubject ASC
+					</when>
+				</choose>
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	
+
+	<!-- 커뮤니티 qna 작성글 개수 -->
+	<select id="qnaDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM communityQna
+		<where>
+			memberEmail=#{memberEmail} AND depth = 0
+			<if test="selected != 2">
+				AND selected = #{selected}
+			</if>
+		</where>
+	</select>
+
+	<!-- 커뮤니티 qna 작성글 리스트 -->
+	<select id="qnaList" parameterType="map" resultType="com.sp.dev.mypage.myWrite.MyWrite" >
+		SELECT * FROM (
+			SELECT ROWNUM rnum, tb.* FROM (
+				SELECT qnaNum, memberEmail, subject, TO_CHAR(regDate,'YYYY-MM-DD') regDate, depth, replyNum, selected
+				FROM communityQna
+				<where>
+					memberEmail=#{memberEmail} AND depth = 0
+					<if test="selected != 2">
+						AND selected = #{selected}
+					</if>
+				</where>
+				ORDER BY regDate DESC
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	<!-- 모집한 스터디 개수  -->
+	<select id="studyDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM study
+		<where>
+			memberEmail=#{memberEmail}
+			<if test="status != 2">
+				AND status = #{status}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 모집한 스터디 리스트 -->
+	<select id="studyList" parameterType="map" resultType="com.sp.dev.mypage.myWrite.MyStudyWrite">
+		SELECT * FROM (
+			SELECT ROWNUM rnum, tb.* FROM (
+				SELECT studyNum, memberEmail, r.regionNum, region, subject, TO_CHAR(regDate,'YYYY-MM-DD') regDate, limit, applied, status
+				FROM study s
+				JOIN studyRegion r ON s.regionNum = r.regionNum
+				<where>
+					memberEmail=#{memberEmail}
+					<if test="status != 2">
+						AND status = #{status}
+					</if>
+				</where>
+				ORDER BY regDate DESC
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	<!-- 스터디 지원자 리스트 -->
+	<select id="studyApplyList" parameterType="Integer" resultType="com.sp.dev.mypage.myWrite.StudyApply">
+		SELECT applyNum, studyNum, s.applicantEmail, status, memberName
+		FROM studyApply s
+		JOIN member m ON m.memberEmail=s.applicantEmail
+		WHERE studyNum=#{studyNum}
+	</select>
+	
+	<!-- 스터디 지원자 승인 -->
+	<update id="updateApplyStatus" parameterType="Integer">
+		UPDATE studyApply SET status= 1 WHERE applyNum=#{applyNum}
+	</update>
+	
+	<!-- 지원자 승인 시 승인완료된 인원 증가 -->
+	<update id="updateApplyNum" parameterType="Integer">
+		UPDATE study SET applied=applied+1 WHERE studyNum=#{studyNum}
+	</update>
+	
+	<!-- 완료버튼 클릭 시 지원 마감 -->
+	<update id="updateStudyStatus" parameterType="Integer">
+		UPDATE study SET status=1 WHERE studyNum=#{studyNum}
+	</update>
+	
+	
+	<!-- 내가 지원한 스터디 리스트 -->
+	<select id="myStudyList" parameterType="map" resultType="com.sp.dev.mypage.myWrite.MyStudyWrite">
+		SELECT a.studyNum, applyNum, a.applicantEmail, r.regionNum, region, subject, TO_CHAR(regDate,'YYYY-MM-DD') regDate, limit, applied, s.status, a.status applyStatus
+		FROM studyApply a
+		JOIN study s ON a.studyNum=s.studyNum
+		JOIN studyRegion r ON s.regionNum = r.regionNum
+		<where>
+			a.applicantEmail=#{memberEmail}
+			<if test="status != 2">
+				AND s.status = #{status}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 스터디 지원 취소 -->
+	<update id="cancelApply" parameterType="Integer">
+		UPDATE studyApply SET status= 2 WHERE applyNum=#{applyNum}
+	</update>
+	
+	
+	
+	<!-- 지원한 멘토링 개수 -->
+	<select id="mentorDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM mentoringApply
+		<where>
+			memberEmail=#{memberEmail}
+			<if test="status != 9">
+				AND status = #{status}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 지원한 멘토링 리스트 -->
+	<select id="mentorList" parameterType="map" resultType="com.sp.dev.mypage.mentor.ApplyMentor">
+		SELECT * FROM (
+			SELECT ROWNUM rnum, tb.* FROM (
+				SELECT a.mentorNum, mentoringNum, a.memberEmail, mentorSubject, mentoringPrice, mentoringDate,
+						status, approveDate, phoneNum, applyMessage, applyDate
+				FROM mentoringApply a
+				JOIN mentor m ON a.mentorNum = m.mentorNum
+				<where>
+					a.memberEmail=#{memberEmail}
+					<if test="status != 9">
+						AND status = #{status}
+					</if>
+				</where>
+				ORDER BY applyDate DESC
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	<!-- status가 이용완료(1)인 리스트 -->
+	<select id="status1" parameterType="map" resultType="com.sp.dev.mypage.mentor.ApplyMentor">
+		SELECT a.mentorNum, mentoringNum, a.memberEmail, mentoringDate, status, applyDate
+		FROM mentoringApply a
+		JOIN mentor m ON a.mentorNum = m.mentorNum
+		WHERE a.memberEmail=#{memberEmail} AND status = 1
+	</select>
+	
+	<!-- 상담시간이 지난 데이터는 status 이용완료(3)으로 변경 -->
+	<update id="statusUpdate" parameterType="Integer">
+		UPDATE mentoringApply SET status=3 
+		WHERE mentoringNum=#{mentoringNum}
+	</update>
+	
+	<!-- 멘토링 상세 -->
+	<select id="readMentor" parameterType="map" resultType="com.sp.dev.mypage.mentor.ApplyMentor">
+		SELECT mentorSubject, mb.memberNickname, mentorContent, mentoringPrice, 
+				mentoringDate, status, applyDate
+		FROM mentoringApply a
+		JOIN mentor m ON a.mentorNum = m.mentorNum
+		JOIN member mb ON m.memberEmail = mb.memberEmail
+		<where>
+			mentoringNum=#{mentoringNum}
+		</where>
+		ORDER BY applyDate DESC
+	</select>
+	
+	<!-- 멘토링 리뷰 등록 -->
+	<insert id="insertMentorReview" parameterType="com.sp.dev.mypage.mentor.ApplyMentor">
+		INSERT INTO mentorReview(mentoringNum, mentorRate, mentorReviewContent, mentorNum)
+			VALUES(#{mentoringNum}, #{mentorRate}, #{mentorReviewContent}, #{mentorNum})
+	</insert>
+	
+	<!-- 멘토링 리뷰 불러오기 -->
+	<select id="readMentorReview" parameterType="Integer" resultType="com.sp.dev.mypage.mentor.ApplyMentor">
+		SELECT mentoringNum, mentorRate, mentorReviewContent, mentorNum
+		FROM mentorReview
+		WHERE mentoringNum=#{mentoringNum}
+	</select>
+	
+	<!-- 멘토링 리뷰 수정 -->
+	<update id="updateMentorReview"  parameterType="com.sp.dev.mypage.mentor.ApplyMentor">
+		UPDATE mentorReview SET mentorRate=#{mentorRate}, mentorReviewContent=#{mentorReviewContent}
+		WHERE mentoringNum=#{mentoringNum}
+	</update>
+	
+	
+	<!-- 강의 좋아요 개수 -->
+	<select id="likeDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM lectureLike lk
+		JOIN lecture l ON lk.lectureNum=l.lectureNum
+		<where>
+			lk.memberEmail=#{memberEmail}
+			<choose>
+				<when test="free == 0">
+					AND lecturePrice != 0
+				</when>
+				<when test="free == 1">
+					AND lecturePrice = 0
+				</when>
+			</choose>
+		</where>
+	</select>
+	
+	<!-- 강의 좋아요 리스트 -->
+	<select id="likeList" parameterType="map" resultType="com.sp.dev.mypage.like.Like">
+		SELECT * FROM (
+			SELECT ROWNUM rnum, tb.* FROM (
+				SELECT lk.lectureNum, lectureSubject, lecturePrice, l.regDate, 
+						m.memberNickname, thumbnail
+				FROM lectureLike lk
+				JOIN lecture l ON lk.lectureNum = l.lectureNum
+				JOIN member m ON l.memberEmail = m.memberEmail
+				<where>
+					lk.memberEmail=#{memberEmail}
+					<choose>
+						<when test="free == 0">
+							AND lecturePrice != 0
+						</when>
+						<when test="free == 1">
+							AND lecturePrice = 0
+						</when>
+					</choose>
+				</where>
+				<choose>
+					<when test="order == 2">
+						ORDER BY l.regDate DESC
+					</when>
+					<when test="order == 0">
+						ORDER BY lectureSubject ASC
+					</when>
+					<when test="order == 1">
+					</when>
+				</choose>
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	
+	<!-- 수강바구니 개수 -->
+	<select id="cartDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM cart
+		WHERE memberEmail=#{memberEmail}
+	</select>
+	
+	<!-- 수강바구니 리스트 -->
+	<select id="cartList" parameterType="map" resultType="com.sp.dev.mypage.cart.Cart">
+		SELECT c.memberEmail, m1.memberName, c.lectureNum, lectureSubject, 
+				m2.memberNickname, lectureDuration, lecturePrice, dcPercent, thumbnail
+		FROM cart c
+		JOIN lecture l ON c.lectureNum = l.lectureNum
+		JOIN member m1 ON c.memberEmail = m1.memberEmail
+		JOIN member m2 ON l.memberEmail = m2.memberEmail
+		WHERE c.memberEmail=#{memberEmail}
+	</select>
+	
+	<!-- 수강바구니 삭제 -->
+	<!-- 
+	<delete id="deleteCart" parameterType="map">
+		DELETE FROM cart 
+		WHERE memberEmail=#{memberEmail} AND lectureNum=#{lectureNum}
+	</delete>
+	 -->
+	 <delete id="deleteCart" parameterType="com.sp.dev.mypage.cart.CartList">
+		DELETE FROM cart 
+		WHERE memberEmail=#{memberEmail} AND lectureNum=#{lectureNum}
+	</delete>
+	
+	<!-- 수강바구니 체크된 리스트 -->
+	<select id="cartCheckList" parameterType="map" resultType="com.sp.dev.mypage.cart.Cart">
+		SELECT NVL(SUM(lecturePrice), 0) totalPrice, NVL(SUM(lecturePrice*dcPercent/100),0) totalDiscount
+		FROM cart c
+		JOIN lecture l ON c.lectureNum = l.lectureNum
+		JOIN member m1 ON c.memberEmail = m1.memberEmail
+		JOIN member m2 ON l.memberEmail = m2.memberEmail
+		<where>
+			c.memberEmail=#{memberEmail}
+			<if test="lectureNum != null">
+				AND c.lectureNum IN
+				<foreach collection="lectureNum" item="chk" open="(" close=")" separator=",">
+				 #{chk}
+				</foreach>
+			</if>
+		</where>
+	</select>
+	
+	<!-- 결제 -->
+	<select id="readSugangSeq" resultType="long">
+		SELECT sugang_seq.NEXTVAL FROM dual
+	</select>
+	<!-- 
+	<insert id="insertSugang" parameterType="map">
+		<selectKey keyProperty="sugangNum" resultType="Integer" order="BEFORE">
+			SELECT sugang_seq.NEXTVAL FROM dual
+		</selectKey>
+		INSERT ALL
+			INTO sugang (sugangNum, memberEmail, totalPay, totalDiscount)
+			VALUES (#{sugangNum}, #{dto.memberEmail}, #{dto.totalPay},#{dto.totalDiscount})
+				
+			INTO pay (sugangNum, totalPay, payDate, payState, approveNum)
+			VALUES (#{sugangNum}, #{dto.totalPay}, SYSDATE, #{payState}, #{approveNum})	
+			
+			INTO sugangDetail(detailNum, lectureNum, sugangNum, memberEmail, 
+								lecturePay, discount, lectureSdate, lectureEdate, point, coupon)
+			VALUES (sugangDetail_seq.NEXTVAL, #{dto.lectureNum}, #{sugangNum}, #{dto.memberEmail}, 
+					#{dto.lecturePay}, #{dto.discount}, SYSDATE, to_date(#{dto.lectureEdate}, 'YYYY-MM-DD'), 0, 0)
+				
+		SELECT * FROM dual
+	</insert>
+	 -->
+	 
+	 <select id="countVal" resultType="Integer">
+	 	SELECT sugangDetail_seq.NEXTVAL FROM dual
+	 </select>
+	 
+	 <insert id="insertSugang" parameterType="map">
+	 	<selectKey keyProperty="sugangNum" resultType="Integer" order="BEFORE">
+		 	SELECT sugang_seq.NEXTVAL sugangNum FROM dual
+		 </selectKey>
+		INSERT ALL
+			INTO sugang (sugangNum, memberEmail, totalPay, totalDiscount)
+			VALUES (#{sugangNum}, #{memberEmail}, #{totalPay},#{totalDiscount})
+				
+			INTO pay (sugangNum, totalPay, payDate, payState, approveNum)
+			VALUES (#{sugangNum}, #{totalPay}, SYSDATE, #{payState}, #{approveNum})	
+			
+			<foreach collection="list" item="vo">
+				 INTO sugangDetail(detailNum, lectureNum, sugangNum, memberEmail, 
+								lecturePay, discount, lectureSdate, lectureEdate, point, coupon)
+			VALUES (#{vo.detailNum}, #{vo.lectureNum}, #{sugangNum}, #{vo.memberEmail}, 
+					#{vo.lecturePay}, #{vo.discount}, SYSDATE, to_date(#{vo.lectureEdate}, 'YYYY-MM-DD'), 0, 0)
+			</foreach>
+			
+		select * from dual
+	</insert>
+	<insert id="insertSugangDetail" parameterType="com.sp.dev.mypage.cart.CartList">
+		 INSERT INTO sugangDetail(detailNum, lectureNum, sugangNum, memberEmail, 
+								lecturePay, discount, lectureSdate, lectureEdate, point, coupon)
+			VALUES (sugangDetail_seq.NEXTVAL, #{lectureNum}, #{sugangNum}, #{memberEmail}, 
+					#{lecturePay}, #{discount}, SYSDATE, to_date(#{lectureEdate}, 'YYYY-MM-DD'), 0, 0)
+	</insert>
+	
+	
+	<!-- 프로필 등록하기 -->
+	<insert id="insertProfile" parameterType="com.sp.dev.mypage.profile.Profile">
+		INSERT INTO memberProfile(memberEmail, saveFileName, intro, businessEmail, phoneNum)
+		VALUES(#{memberEmail}, #{saveFileName}, #{intro}, #{businessEmail}, #{phoneNum})
+	</insert>
+	
+	
+	<!-- 프로필 불러오기 -->
+	<select id="readProfile" parameterType="map" resultType="com.sp.dev.mypage.profile.Profile">
+		SELECT p.memberEmail, saveFileName, intro, businessEmail, phoneNum, memberNickname
+		FROM memberProfile p
+		JOIN member m ON p.memberEmail = m.memberEmail
+		WHERE p.memberEmail=#{memberEmail}
+	</select>
+	
+	<!-- 프로필 수정하기 -->
+	<update id="updateProfile" parameterType="com.sp.dev.mypage.profile.Profile">
+		UPDATE memberProfile SET saveFileName=#{saveFileName}, intro=#{intro}, 
+				businessEmail=#{businessEmail}, phoneNum=#{phoneNum}
+		WHERE memberEmail=#{memberEmail}
+	</update>
+	
+	<update id="updateNickname" parameterType="com.sp.dev.mypage.profile.Profile">
+		UPDATE member SET memberNickname=#{memberNickname} WHERE memberEmail=#{memberEmail}
+	</update>
+	
+	
+	
+	<sql id="where-list">
+		<if test="condition=='title' ">
+			INSTR(lectureSubject, #{keyword}) &gt; 0
+		</if>
+		<if test="condition=='content' ">
+			DBMS_LOB.INSTR(question, #{keyword}) &gt; 0
+		</if>
+	</sql>
+	
+	<!-- 수강 전 문의 개수 -->
+	<select id="inquiryDataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0) 
+		FROM lectureInquiry i
+		JOIN lecture l ON i.lectureNum=l.lectureNum
+		<where>
+			qMember=#{memberEmail}
+			<if test="keyword!=null and keyword != '' ">
+				AND
+				<include refid="where-list"/>
+			</if>
+			<choose>
+				<when test="status == 0">
+					AND aMember IS NULL
+				</when>
+				<when test="status == 1">
+					AND aMember IS NOT NULL
+				</when>
+			</choose>
+		</where>
+	</select>
+	
+	<!-- 수강 전 문의 리스트 -->
+	<select id="inquiryList" parameterType="map" resultType="com.sp.dev.mypage.inquiry.Inquiry">
+		SELECT * FROM (
+			SELECT ROWNUM rnum, tb.* FROM (
+				SELECT lectureSubject, inquiryNum,i.lectureNum,qMember,
+						question,q_regDate,aMember,answer,a_regDate, memberNickname, saveFileName
+				FROM lectureInquiry i
+				JOIN lecture l ON i.lectureNum=l.lectureNum
+				JOIN member m ON m.memberEmail=l.memberEmail
+				LEFT OUTER JOIN memberProfile p ON p.memberEmail=m.memberEmail 
+				<where>
+					qMember=#{memberEmail}
+					<if test="keyword!=null and keyword != '' ">
+						AND
+						<include refid="where-list"/>
+					</if>
+					<choose>
+						<when test="status == 0">
+							AND aMember IS NULL
+						</when>
+						<when test="status == 1">
+							AND aMember IS NOT NULL
+						</when>
+					</choose>
+				</where>
+				ORDER BY q_regDate DESC
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	<!-- 수강 전 문의 삭제 -->
+	<delete id="deleteInquiry" parameterType="Integer">
+		DELETE FROM lectureInquiry WHERE inquiryNum=#{inquiryNum}
+	</delete>
+	
+	
+	
+	<!-- 구매내역 리스트 -->
+	<select id="purchasedList" parameterType="map" resultType="com.sp.dev.mypage.purchased.Purchased">
+		SELECT s.sugangNum, s.memberEmail, totalPay, totalDiscount,
+         			max(lectureSubject) lectureSubject, lectureSdate, totalCount
+		FROM sugang s
+		JOIN sugangDetail d ON s.sugangNum=d.sugangNum
+		JOIN lecture l ON d.lectureNum=l.lectureNum
+		JOIN (SELECT sugangNum, count(*) totalCount
+		        FROM sugangDetail sd
+		        GROUP BY sugangNum) td ON td.sugangNum = d.sugangNum
+		WHERE s.memberEmail=#{memberEmail}
+		GROUP BY s.sugangNum, s.memberEmail, totalPay, totalDiscount,lectureSdate,totalCount
+	</select>
+	
+	<!-- 구매내역 상세 리스트 -->
+	<select id="purchasedDetailList" parameterType="map" resultType="com.sp.dev.mypage.purchased.Purchased">
+		SELECT s.sugangNum, s.memberEmail, totalPay, totalDiscount, detailNum, d.lectureNum,
+				lecturePay, discount, point, coupon, lectureSubject, lectureSdate
+		FROM sugang s
+		JOIN sugangDetail d ON s.sugangNum=d.sugangNum
+		JOIN lecture l ON d.lectureNum=l.lectureNum
+		WHERE s.sugangNum=#{sugangNum}
+	</select>
+	
+</mapper>

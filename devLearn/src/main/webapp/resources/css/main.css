@@ -1,0 +1,232 @@
+@charset "UTF-8";
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+
+.search-border {
+	height: 50px;
+	border-color: #6799FF;
+}
+.search-border > input{
+	
+}
+
+.search-border > input:focus {
+	border: none;
+	outline: none;
+
+}
+
+
+.carousel-item img {
+	height: 320px;
+	margin: 0 auto;
+}
+
+.courses {
+	display: flex;
+	gap:15px;
+}
+
+.course-Prices {
+	display: flex;
+	gap: 5px;
+}
+.course-originalPrice {
+	color: #ccc;
+	text-decoration: line-through;
+	
+}
+.course-price {
+	color : blue;
+	font-weight: 800;
+}
+
+.card-body a {
+	font-size: 14px;
+}
+
+.card-txt >span {
+	font-size: 14px;
+}
+
+.progress-rate::after {
+	content: "  |  "
+}
+
+.courseCard {
+	min-height: 300px;
+	position: relative;
+	margin: 0 auto;
+}
+
+.courseCard img {
+	width: 100%;
+}
+
+.courseSection {
+	gap :15px;
+}
+
+.courseCardBlack {
+	 background: rgba(0,0,0,0.8); 
+	 height: 100%; 
+	 width: 100%; 
+	 position:absolute;
+	 display: none;
+	 color: #fff;
+}
+
+
+.course-img {
+	width: 100%;
+}
+
+
+.fa-star {
+	color: tomato;
+}
+
+.course_review {
+	width: 75px;
+	height: 30px;
+	background: #FFF6DB;
+	border-radius: 4px;
+	font-size: 13px;
+	font-weight: bold;
+	color: tomato;
+	border: none;
+	margin-bottom: 10px;
+}
+
+.course_review-cnt {
+	color: tomato;
+	font-weight: 300;
+	font-size: 13px;
+}
+
+.carousel-content-text {
+	padding-left: 80px;
+}
+
+.carousel-content-text div:first-child {
+	font-size: 14px;
+	font-weight: 700;
+	height: 24px;
+	line-height: 24px;
+	padding : 0 10px;
+	border-radius: 4px;
+	min-width: 40px;
+	margin-bottom: 10px;
+}
+
+.carousel-content-text h1 {
+	font-size : 32px;
+	font-weight: 900;
+	margin-bottom: 10px;
+	
+}
+
+.carousel-content-text p:last-child {
+	font-weight: 16px;
+}
+
+.currentCourse-card {
+	padding: none;
+}
+
+
+.course_review-cnt {
+	color: tomato;
+	font-weight: 300;
+	font-size: 13px;
+}
+
+.carousel-content-text {
+	padding-left: 80px;
+}
+
+.current-card {
+	margin: 0 auto; 
+	border-radius: 5px; 
+	border: 1px solid #ddd; 
+	height: 120px;  
+	overflow: hidden;
+}
+
+.current-card:hover {
+	box-shadow: 3px 3px #aaa;
+} 
+
+.card-body p:first-child {
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.card-title {
+	font-size: 16px;
+	font-weight: 700;
+	height: 40px;
+}
+
+
+.course-instructor{
+	font-size: 14px;
+	margin-bottom: 3px;
+	padding-bottom: 0;
+}
+
+.courseGrade {
+	font-size: 14px;
+	color: tomato;
+}
+
+.courseCardBlack {
+	padding: 12px;
+	color : #fff;
+}
+
+.courseCardBlack > .courseTitle {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.courseDesc {
+	font-size: 14px;
+	max-height: 66px;
+	text-overflow: ellipsis;
+}
+
+.iconDesc > p {
+	margin-bottom: 2px;
+	font-size: 14px;
+	color : c5ebf8;
+}
+
+.blackAdd p {
+	text-align: right;
+}
+
+.showP {
+	font-size : 12px;
+	opacity: 0;
+}
+
+.showP p {
+	background: tomato; 
+	border-radius: 3px;
+	padding: 2px 4px;
+	
+}
+
+.overP:hover {
+	cursor: pointer;
+}
+
+.overP:hover +  .showP p {
+	display: block;
+}

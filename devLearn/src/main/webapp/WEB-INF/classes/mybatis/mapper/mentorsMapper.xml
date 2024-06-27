@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mentors">	
+	<select id="listCategory" resultType="com.sp.dev.mentors.Mentors">
+		SELECT * FROM category
+		WHERE maincategory IS NULL
+	</select>
+
+	<select id="dataCount" parameterType="map" resultType="Integer">
+		SELECT NVL(COUNT(*), 0)
+		FROM mentor 	
+		<if test="categoryNum != 00">
+			WHERE categoryNum = #{categoryNum}
+		</if>
+			
+	</select>
+	
+	<select id="listMentoring" parameterType="map" resultType="com.sp.dev.mentors.Mentors">
+	SELECT * FROM (
+		SELECT ROWNUM rnum, tb.* FROM (
+			SELECT DISTINCT mt.mentorNum, m.memberNickname, mp.saveFilename, mt.mentorSubject, NVL(applyCnt, 0)applyCnt, ReviewCnt, reviewAve
+			FROM mentor mt
+			LEFT OUTER JOIN member m ON mt.memberEmail = m.memberEmail
+			LEFT OUTER JOIN memberProfile mp ON mt.memberEmail = mp.memberEmail
+            LEFT OUTER JOIN (
+                SELECT mentorNum, count(*)applyCnt
+                FROM mentoringApply 
+                GROUP BY mentorNum
+                ) ma ON ma.mentorNum = mt.mentorNum
+            LEFT OUTER JOIN(
+                SELECT mentorNum, count(*)ReviewCnt, AVG(mentorRate)reviewAve 
+                FROM mentorReview GROUP BY mentorNum
+                ) mr ON mr.mentorNum = mt.mentorNum
+			<if test="categoryNum != 00">
+				WHERE categoryNum = #{categoryNum}
+			</if>
+			<choose>
+				<when test="choiceValue == 1">
+					ORDER BY mentorNum DESC
+				</when>
+				<when test="choiceValue == 2">
+					ORDER BY applyCnt DESC
+				</when>
+			</choose>
+			) tb WHERE ROWNUM &lt;= #{end}
+		) WHERE rnum &gt;= #{start}
+	</select>
+	
+	<select id="readMentors" parameterType="Integer" resultType="com.sp.dev.mentors.Mentors">
+		SELECT mentorNum, mt.memberEmail, m.memberNickname, mentorSubject, mentorContent, mentorPrice, ableDay, sTime, eTime
+		FROM mentor mt
+		JOIN member m ON mt.memberEmail =  m.memberEmail
+		WHERE mentorNum = #{mentorNum}
+	</select>
+	
+	<select id="readAbleTime" parameterType="Integer" resultType="com.sp.dev.mentors.Mentors">
+		SELECT mentorNum, mentorSubject, ableDay, sTime, eTime, mentorPrice
+		FROM mentor
+		WHERE mentorNum = #{mentorNum}
+	</select>
+	
+	<select id="readMentoringPaymentSeq" resultType="long">
+		SELECT mentorPay_seq.NEXTVAL FROM dual
+	</select>
+	
+	<!-- <insert id="insertMentoringApply" parameterType="map">
+		<selectKey keyProperty="mentoringNum" resultType="Integer" order="AFTER">
+				SELECT MENTORINGAPPLY_SEQ.NEXTVAL FROM dual
+		</selectKey>
+		INSERT INTO mentoringApply (mentoringNum, mentorNum, memberEmail, mentoringPrice,
+			 mentoringDate, status, phoneNum, applyMessage, applyDate)
+		VALUES ( MENTORINGAPPLY_SEQ.NEXTVAL, #{dto.mentorNum}, #{dto.memberEmail}, #{dto.mentorPrice},
+			#{dto.mentoringDate}, 0, #{dto.phoneNum}, #{dto.applyMessage}, SYSDATE )
+			
+	</insert> -->
+	
+	<update id="insertMentoringApply" parameterType="map">
+		<selectKey keyProperty="mentoringNum" resultType="Integer" order="BEFORE">
+				SELECT MENTORINGAPPLY_SEQ.NEXTVAL FROM dual
+		</selectKey>
+		INSERT ALL
+			INTO mentoringApply (
+				mentoringNum, mentorNum, memberEmail, mentoringPrice,
+				mentoringDate, status, phoneNum, applyMessage, applyDate)
+			VALUES (
+				#{mentoringNum}, #{dto.mentorNum}, #{dto.memberEmail}, #{dto.mentoringPrice},
+				#{dto.mentoringDate}, 0, #{dto.phoneNum}, #{dto.applyMessage}, SYSDATE )
+				
+			INTO mentorPay (
+				detailNum, paid, payDate, payState, approveNum, paymentCode)
+			VALUES (
+				#{mentoringNum}, #{dto.mentoringPrice}, SYSDATE, #{payState}, #{approveNum}, #{paymentCode} )		
+		SELECT * FROM dual
+	</update>
+	
+	<!-- <insert id="insertMentoringPayment" parameterType="map">
+		INSERT INTO mentorPay (detailNum, paid, payDate, payState, approveNum, paymentCode)
+		VALUES (#{lastIndex}, #{dto.mentoringPrice}, SYSDATE, #{payState}, #{approveNum}, #{paymentCode} )	
+	</insert> -->
+	
+	<select id="mentorReviewList" parameterType="Integer" resultType="com.sp.dev.mentors.Mentors">
+		SELECT mentorRate, mentorReviewContent 
+		FROM mentorReview
+		WHERE mentoringNum IN (
+			SELECT mentoringNum 
+			FROM mentoringApply 
+			WHERE mentorNum = #{mentorNum}
+		)
+	</select>
+	
+	<select id="ReviewstatisticInfo" parameterType="Integer" resultType="map">
+		SELECT 
+			NVL((SELECT NVL(COUNT(*), 0) FROM mentoringApply WHERE mentorNum = #{mentorNum}), 0) applyCnt,
+			NVL((SELECT TO_CHAR(NVL(AVG(mentorRate), 0), 'fm99.0') FROM mentorReview WHERE mentorNum = #{mentorNum} GROUP BY mentorNum), 0) reviewRate,
+			NVL((SELECT NVL(COUNT(*), 0) FROM mentorReview WHERE mentorNum = #{mentorNum} GROUP BY mentorNum), 0) reviewCnt
+		FROM dual
+		
+	</select>
+	
+</mapper>
